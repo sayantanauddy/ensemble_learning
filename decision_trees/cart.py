@@ -10,7 +10,7 @@ missing attributes. The iris data set is used here.
 """
 
 import numpy as np
-
+import operator
 
 def readdata(datafile):
     """
@@ -19,6 +19,8 @@ def readdata(datafile):
         datafile: string containing the full path of the data file
     Output:
         (attributes, classes): list of attributes and classes
+        attributes is a list of lists, where each row is a data point
+        classes contains the label for the corresponding attribute row
     """
     
     attributes = []  # List for attributes (float)
@@ -35,7 +37,49 @@ def readdata(datafile):
             classes.append(line.split(',')[4])
 
     return (attributes, classes)
+
+
+def split_dataset(data, ratio_training):
+    """
+    Splits dataset into training and test sets in the ratio 80-20
+    Input:
+        data = (attributes, classes): list of attributes and classes
+        attributes is a list of lists, where each row is a data point
+        classes contains the label for the corresponding attribute row
+        ratio_training: Ratio of training data to total data
+    Output:
+        (training_data, test_data) where training_data and test_data have the same
+        format as the input data
+    """
+
+    # Divide the data into training set and test set
+    # training = 80%, test = 20%    
+    attributes = data[0]
+    classes = data[1]
+    total_row_count = len(attributes)
+    training_row_count = int(round(ratio_training*total_row_count))
     
+    # From 0 to (total_row_count-1) randomly pick training_row_count numbers
+    training_row_indices = list(np.random.choice(range(total_row_count), training_row_count, replace=False))
+    
+    training_attributes = []
+    training_classes = []
+    test_attributes = []
+    test_classes = []
+    
+    for i in range(total_row_count):
+        if i in training_row_indices:
+            training_attributes.append(attributes[i])
+            training_classes.append(classes[i])
+        else:
+            test_attributes.append(attributes[i])
+            test_classes.append(classes[i])
+            
+    training_data = (training_attributes, training_classes)
+    test_data = (test_attributes, test_classes)
+    
+    return (training_data, test_data)
+        
 
 def uniquecounts(classes):
     """
@@ -70,6 +114,7 @@ def gini(classes):
         sum_p += (v/float(sum(unique_counts.values())))**2
     return 1.0-sum_p
     
+    
 def split(attributes, classes, split_attribute_index, split_attribute_val):
     """
     Splits the data (attributes and classes) into two sets based on the split
@@ -84,6 +129,7 @@ def split(attributes, classes, split_attribute_index, split_attribute_val):
         split_data = ((attributes1, classes1),(attributes2, classes2))
         The input data is split into two classes and returned
     """
+
     attributes1 = []
     classes1 = []
     attributes2 = []
@@ -152,7 +198,7 @@ def cart(data, min_rows):
         best_attribute_split_val = -1
         for attribute_number in range(len(attributes[0])):
             # Get all unique values for a particular attribute and sort them
-            all_values = list(set([row[attribute_number] for row in attributes]))
+            all_values = list(set([row[attribute_number] for row in attributes]))            
             all_values.sort()
             
             # If all_values contains n values, there are n-1 possible split locations
@@ -169,19 +215,37 @@ def cart(data, min_rows):
                     best_attribute_index = attribute_number
                     best_attribute_split_val = split_val
 
+        # In the rare case when a node has multile rows which are exact copies,
+        # then a split location cannot be found even though the number of rows
+        # is above the threshold. In this case, the entire node is labelled as 
+        # a leaf.
+        # If this is not done, then the recursive calls for split will continue
+        # indefinitely (since best_attribute_index=-1 and best_attribute_split_val=-1)
+        # and when the recursion limit is reached, a runtime exception will be thrown.
+        # This situation does not always occur, but may result based on the way
+        # the subsamples are created.
+
+        if best_attribute_index == -1:
+            root = { \
+            'decision_attribute':None, \
+            'decision_attribute_val':None, \
+            'children':{}, \
+            'label':'leaf', \
+            'classes': classes}
                     
-        # The first set is where the value of the split attribute is <= best_attribute_split_val 
-        split_data = split(attributes, classes, best_attribute_index, best_attribute_split_val)
-        
-        # Create a root node    
-        # Node(parent,decision_attribute,label)
-        # The key 'le' stands for less than or equal to. 'gt' => greather than
-        root = {'decision_attribute':best_attribute_index, \
-                'decision_attribute_val':best_attribute_split_val,\
-                'children':{'le':cart(split_data[0], min_rows), 'gt':cart(split_data[1], min_rows)}, \
-                'label':None, \
-                'classes': None}
-        
+        else:    
+            # The first set is where the value of the split attribute is <= best_attribute_split_val 
+            split_data = split(attributes, classes, best_attribute_index, best_attribute_split_val)
+            
+            # Create a root node    
+            # Node(parent,decision_attribute,label)
+            # The key 'le' stands for less than or equal to. 'gt' => greather than
+            root = {'decision_attribute':best_attribute_index, \
+                    'decision_attribute_val':best_attribute_split_val,\
+                    'children':{'le':cart(split_data[0], min_rows), 'gt':cart(split_data[1], min_rows)}, \
+                    'label':None, \
+                    'classes': None}
+            
         return root
 
 
@@ -195,7 +259,9 @@ def classify(row, cart_tree):
         Classification result
     """
     if cart_tree['label'] == 'leaf':
-        return cart_tree['classes']
+        # Return the class with the maximum number of occurances
+        unique_counts = uniquecounts(cart_tree['classes'])
+        return max(unique_counts.iteritems(), key=operator.itemgetter(1))[0]
     else:
         decision_attribute_index = cart_tree['decision_attribute']
         row_val_for_decision_attribute = row[decision_attribute_index]
@@ -207,9 +273,8 @@ def classify(row, cart_tree):
         ret = classify(row, subtree)
         return ret
         
-    
-        
-    
+
+
 def main():
     """
     Main function.
@@ -228,31 +293,13 @@ def main():
     
     # Fetch the data
     data = readdata(datafile)
-    
+
     # Divide the data into training set and test set
-    # training = 80%, test = 20%    
-    attributes = data[0]
-    classes = data[1]
-    total_row_count = len(attributes)
-    training_row_count = int(round(0.8*total_row_count))
-    
-    # From 0 to (total_row_count-1) randomly pick training_row_count numbers
-    training_row_indices = list(np.random.choice(range(total_row_count), training_row_count, replace=False))
-    
-    training_attributes = []
-    training_classes = []
-    test_attributes = []
-    test_classes = []
-    
-    for i in range(total_row_count):
-        if i in training_row_indices:
-            training_attributes.append(attributes[i])
-            training_classes.append(classes[i])
-        else:
-            test_attributes.append(attributes[i])
-            test_classes.append(classes[i])
-            
-    training_data = (training_attributes, training_classes)
+    # training = 80%, test = 20%        
+    (training_data, test_data) = split_dataset(data, 0.8)
+
+    # Compute number of rows in training set
+    total_row_count = len(training_data[0])
     
     # If number of rows in a node is <= this number then do not split further
     min_rows = int(round(0.05*total_row_count))
@@ -263,12 +310,12 @@ def main():
     # Testing: Use the built tree to find the classification error on the test set
     # Total error is just the 1-0 loss
     err_count = 0
-    for i in range(len(test_attributes)):
-        if test_classes[i] not in classify(test_attributes[i], cart_tree):
+    for i in range(len(test_data[0])):
+        if test_data[1][i] != classify(test_data[0][i], cart_tree):
             err_count += 1.0
             
     # Display the accuracy as a percentage        
-    accuracy = 1.0 - float(err_count)/len(test_attributes)
+    accuracy = 1.0 - float(err_count)/len(test_data[0])
     print str(accuracy*100) + '%'
 
 if __name__ == "__main__":
