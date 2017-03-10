@@ -4,7 +4,10 @@ Created on Tue Feb 21 14:28:17 2017
 
 @author: sayantan
 Simple implementation of the ID3 algorithm. No pruning is performed and missing
-attributes are not handled. A simple dataset is used, as shown in the mian function.
+attributes are not handled. A simple dataset is used, as shown in the main function.
+
+Based on the ID3 algorithm in the following book:
+'Machine Learning: An Algorithmic Perspective (2nd edition)' - Marsland
 """
 
 from math import log
@@ -27,7 +30,6 @@ def uniquecounts(rows):
             unique_counts[row[len(row)-1]] = 1
     return unique_counts
     
-
 
 def entropy(rows):
     """

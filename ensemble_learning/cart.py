@@ -7,6 +7,8 @@ Implementation of the CART algorithm, considering a simple scenario without
 pruning, only numerical attributes, categorical class labels and without handling
 missing attributes. The iris data set is used here.
 [https://archive.ics.uci.edu/ml/machine-learning-databases/iris/]
+
+Based on [http://cda.psych.uiuc.edu/multivariate_fall_2012/cart_introduction_beamer.pdf]
 """
 
 import numpy as np
@@ -152,24 +154,24 @@ def split(attributes, classes, split_attribute_index, split_attribute_val):
 
 def cart(data, min_rows):
     """
-        Implementation of the CART algorithm. 
-        Note:
-            (i)    All attributes are assumed to be numeric
-            (ii)   No pruning is performed
-        Input:
-            data: (attributes, classes) where attributes contains rows of attributes, and classes
-            contains the label for the corresponding row.
-            min_rows: if the number of rows in a node is less or equal to this number,
-            then that node is not split any further
-        Output:
-            root: A tree in the form of a dictionary. Root can have the following 
-            format.
-                    root = { \
-                            'decision_attribute': <>, \
-                            'decision_attribute_val': <>, \
-                            'children': {'le': <left subtree>, 'gt': <right subtree>}, \
-                            'label': <'leaf' for leaf node, else None>, \
-                            'classes': <class labels if label='leaf'>}
+    Implementation of the CART algorithm. 
+    Note:
+        (i)    All attributes are assumed to be numeric
+        (ii)   No pruning is performed
+    Input:
+        data: (attributes, classes) where attributes contains rows of attributes, and classes
+        contains the label for the corresponding row.
+        min_rows: if the number of rows in a node is less or equal to this number,
+        then that node is not split any further
+    Output:
+        root: A tree in the form of a dictionary. Root can have the following 
+        format.
+                root = { \
+                        'decision_attribute': <>, \
+                        'decision_attribute_val': <>, \
+                        'children': {'le': <left subtree>, 'gt': <right subtree>}, \
+                        'label': <'leaf' for leaf node, else None>, \
+                        'classes': <class labels if label='leaf'>}
     """
     # Decide split variable
     # All attributes are numerical
@@ -271,8 +273,7 @@ def classify(row, cart_tree):
         else:
             subtree = cart_tree['children']['gt']
         ret = classify(row, subtree)
-        return ret
-        
+        return ret        
 
 
 def main():
@@ -318,8 +319,6 @@ def main():
     accuracy = 1.0 - float(err_count)/len(test_data[0])
     print str(accuracy*100) + '%'
 
+
 if __name__ == "__main__":
     main()
-    
-    
-    
