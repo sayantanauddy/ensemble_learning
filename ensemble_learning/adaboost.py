@@ -14,7 +14,7 @@ The following changes have been made to the algorithm in the above paper (for
 handling multiclass classification):
 
     (1)    Labels are not converted to +1 or -1, they are kept as is
-    (2)    The classification decision is not taken by the sign of C(x), but
+    (2)    The classification decision is not taken by the sign of sum(C(x)), but
            instead is taken to be the class that was given the maximum weight
            by the committee of classifiers
     (3)    Weights of the data points are normalized
