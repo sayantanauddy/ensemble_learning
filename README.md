@@ -1,4 +1,4 @@
-# machine_learning
+# Ensemble Learning Algorithms
 Implementation of a few ensemble learning algorithms:
 1. Adaboost
 2. CART
